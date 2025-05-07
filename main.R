@@ -52,7 +52,7 @@ comf$id_multi[is.na(comf$id_multi)] <- comf$COMFA_CODE[is.na(comf$id_multi)]
 fond <- aggregate(comf, by = list(comf$id_multi), FUN = function(x) x[1])
 fond <- fond[, "id_multi"]
 
-
+st_write(fond, "fond.gpkg")
 ###############################################################################
 ####################################################################### DONNEES
 
@@ -100,7 +100,7 @@ palette <- c(
 )
 
 mf_map(fondata, var = "CLASS9", type = "typo", pal = palette, border = NA)
-mf_label(labels, var = "label", col = "#000000", cex = 0.3)
+mf_label(label, var = "nom", col = "#000000", cex = 0.3)
 
 
 
