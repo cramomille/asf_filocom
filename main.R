@@ -52,7 +52,7 @@ comf$id_multi[is.na(comf$id_multi)] <- comf$COMFA_CODE[is.na(comf$id_multi)]
 fond <- aggregate(comf, by = list(comf$id_multi), FUN = function(x) x[1])
 fond <- fond[, "id_multi"]
 
-st_write(fond, "fond.gpkg")
+
 ###############################################################################
 ####################################################################### DONNEES
 
