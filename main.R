@@ -7,212 +7,85 @@
 
 library(sf)
 library(mapsf)
-
-# library(readxl)
-library(data.table)
-
 library(asf)
-# library(dplyr)
-# library(ggplot2)
 
 
 ###############################################################################
-####################################### REPROJECTION DES DROM DU FOND D'ALIETTE
+########################################################### FOND D'ALIETTE ROUX
 
-# Lecture et reprojection du fichier .shp
-irisf <- sf::st_read("C:/Users/Antoine Beroud/Desktop/Atlas/rexplo/data/aliette_roux/donnees/shapefiles/AR01_sf_irisf.shp")
-irisf <- sf::st_transform(irisf, crs = "EPSG:2154")
+# Lecture des fichiers
+mar <- asf_mar()
 
-# Creation d'une couche avec les contours de l'hexagone
-met <- sf::st_union(irisf[!grepl("^97|^98", irisf$IRISF_CODE),])
-met <- sf::st_as_sf(met)
+# Couche geographique des communes a facon et des iris regroupes
+comf <- mar$ar01$sf.comf
+irisr <- mar$ar02$sf.irisr.s
 
-mf_map(met)
+# Repositionnement des DROM
+comf <- asf_drom(comf, id = "COMFA_CODE")
+irisr <- asf_drom(irisr, id = "IRISrS_CODE")
 
-# Calcul des limites de la zone de l'hexagone
-bbox <- sf::st_bbox(met)
-xmin_met <- as.numeric(bbox[1])
-ymin_met <- as.numeric(bbox[2])
-xmax_met <- as.numeric(bbox[3])
-ymax_met <- as.numeric(bbox[4])
+# Agregation en communes regroupees
+comr <- aggregate(irisr, by = list(irisr$COMF_CODE_MULTI), FUN = function(x) x[1])
+comr <- comr[, c("COMF_CODE_MULTI")]
 
-# Espace entre les encarts et l'hexagone
-space <- (xmax_met - xmin_met) *0.05
-
-# Taille des encarts par rapport a la taille de l'hexagone
-ptc_met <- 0.18
-
-# Definition du positionnement de chaque encart
-# Guadeloupe
-xmax <- xmin_met - space
-xmin <- xmax - ((ymax_met - ymin_met) *(ptc_met))
-ymax <- ymax_met
-ymin <- ymax - ((ymax_met - ymin_met) *(ptc_met))
-bb <- c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax)
-boxes <- sf::st_as_sfc(sf::st_bbox(bb, crs = "EPSG:2154"))
-boxes <- sf::st_as_sf(boxes)
-boxes$id <- 1
-boxes$name <- "Guadeloupe"
-
-# Martinique
-xmax <- xmin_met - space
-xmin <- xmax - ((ymax_met - ymin_met) *(ptc_met))
-ymax <- ymax_met - (((ymax_met - ymin_met) *(ptc_met)) *1)
-ymin <- ymax - ((ymax_met - ymin_met) *(ptc_met))
-bb <- c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax)
-xx <- sf::st_as_sfc(sf::st_bbox(bb, crs = "EPSG:2154"))
-xx <- sf::st_as_sf(xx)
-xx$id <- 2
-xx$name <- "Martinique"
-boxes <- rbind(boxes, xx)
-
-# Guyane
-xmax <- xmin_met - space
-xmin <- xmax - ((ymax_met - ymin_met) *(ptc_met))
-ymax <- ymax_met - (((ymax_met - ymin_met) *(ptc_met)) *2)
-ymin <- ymax - ((ymax_met - ymin_met) *(ptc_met))
-bb <- c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax)
-xx <- sf::st_as_sfc(sf::st_bbox(bb, crs = "EPSG:2154"))
-xx <- sf::st_as_sf(xx)
-xx$id <- 3
-xx$name <- "Guyane"
-boxes <- rbind(boxes, xx)
-
-# Reunion
-xmax <- xmin_met - space
-xmin <- xmax - ((ymax_met - ymin_met) *(ptc_met))
-ymax <- ymax_met - (((ymax_met - ymin_met) *(ptc_met)) *3)
-ymin <- ymax - ((ymax_met - ymin_met) *(ptc_met))
-bb <- c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax)
-xx <- sf::st_as_sfc(sf::st_bbox(bb, crs = "EPSG:2154"))
-xx <- sf::st_as_sf(xx)
-xx$id <- 4
-xx$name <- "Reunion"
-boxes <- rbind(boxes, xx)
-
-# Mayotte
-xmax <- xmin_met - space
-xmin <- xmax - ((ymax_met - ymin_met) *(ptc_met))
-ymax <- ymax_met - (((ymax_met - ymin_met) *(ptc_met)) *4)
-ymin <- ymax - ((ymax_met - ymin_met) *(ptc_met))
-bb <- c(xmin = xmin, ymin = ymin, xmax = xmax, ymax = ymax)
-xx <- sf::st_as_sfc(sf::st_bbox(bb, crs = "EPSG:2154"))
-xx <- sf::st_as_sf(xx)
-xx$id <- 5
-xx$name <- "Mayotte"
-boxes <- rbind(boxes, xx)
-
-# Coordonnees veritables des zones ou se situent les DROM 
-boxes$target <- list(c(-62.05, 15.64, -60.99, 16.71), #xmin, ymin, xmax, ymax
-                     c(-61.44, 14.19, -60.6, 15.09),
-                     c(-55.5, 1.8, -50.8, 6),
-                     c(54.99,-21.61, 56.06,-20.64),
-                     c(44.8, -13.2, 45.5, -12.5)
-)
-
-# EPSG local pour chaque zone
-boxes$epsg_loc <- c(5490, 5490, 2972, 2975, 4471)
-sf::st_geometry(boxes) <- "geometry"
-sf::st_crs(boxes) <- 2154
-
-# Creation des encarts
-input <- irisf
-input <- sf::st_transform(input, crs = "EPSG:4326")
-met <- sf::st_transform(met, crs = "EPSG:4326")
-inter <- sf::st_intersects(input, met, sparse = FALSE)
-out <- input[inter,]
-out <- sf::st_transform(out, crs = "EPSG:2154")
-
-for (i in 1 : nrow(boxes)){
-  box <- boxes[i,]
-  bb <- as.vector(unlist(box[,"target"]))
-  bb <- c(xmin = bb[1], ymin = bb[2], xmax = bb[3], ymax = bb[4])
-  mask <- sf::st_as_sfc(sf::st_bbox(bb, crs = "EPSG:4326"))
-  inter <- sf::st_intersects(input, mask, sparse = FALSE)
-  x <- input[inter,]
-  mask <- sf::st_transform(mask, box[,"epsg_loc", drop = T][1])
-  x <- sf::st_transform(x, box[,"epsg_loc", drop = T][1])
-  inset <- mapinsetr::m_r(x = x, mask = mask,  y = box)
-  out <- rbind(out, inset)
-}
-
-fond <- sf::st_transform(out, crs = "EPSG:2154")
-
-# Export
-sf::st_write(fond, "fond_irisf.gpkg",  append = FALSE)
-
-
-###############################################################################
-########################################################### AGREGATION EN COMAR
-
-# Recuperation des iris regroupees
-load("C:/Users/Antoine Beroud/Desktop/Atlas/rexplo/data/aliette_roux/donnees/AR02_maille_IRISr.RData")
-iris <- sf.irisr
-rm(d.irisr.app, d.irisr.etapes, d.irisr.pass, sf.irisr)
-
-# Agregation en communes
-com <- aggregate(iris, by = list(iris$COMF_CODE_MULTI), FUN = function(x) x[1])
-com <- com[, c(1,7,10)]
-
-colnames(com)[1] <- "id_multi"
-
-com <- st_as_sf(com)
-com <- st_transform(com, 2154)
+# Verification des identifiants
+summary(nchar(irisr$COMF_CODE_MULTI))
+summary(nchar(comr$COMF_CODE_MULTI))
 
 # Decomposition des identifiants agreges en une liste
-list_id <- strsplit(com$id_multi, " \\| ")
+id_list <- strsplit(comr$COMF_CODE_MULTI, " \\| ")
 
-# Creation d'une table d'association entre chaque commune et son id_multi
-tabl_id <- data.frame(
-  id_comf = unlist(list_id),
-  id_multi = rep(com$id_multi, sapply(list_id, length))
+# Creation d'une table d'association entre chaque commune et son COMF_CODE_MULTI
+id_tabl <- data.frame(
+  id_comf = unlist(id_list),
+  id_multi = rep(comr$COMF_CODE_MULTI, sapply(id_list, length))
 )
 
+# Creation d'une table de passage entre les commmunes et les communes regroupees
+comf <- comf[, "COMFA_CODE"]
+comf <- merge(comf, id_tabl, by.x = "COMFA_CODE", by.y = "id_comf", all.x = TRUE)
 
-# Lecture du fond avec les DROM
-irisf <- st_read("C:/Users/Antoine Beroud/Desktop/Atlas/rexplo/data/aliette_roux/donnees/fond_irisf.gpkg")
+# Conservation des codes des communes de Mayotte
+comf$id_multi[is.na(comf$id_multi)] <- comf$COMFA_CODE[is.na(comf$id_multi)]
 
-comf <- aggregate(irisf, by = list(irisf$COMF_CODE), FUN = function(x) x[1])
-comf <- comf[, 5]
+# Agregation en communes regroupees
+fond <- aggregate(comf, by = list(comf$id_multi), FUN = function(x) x[1])
+fond <- fond[, "id_multi"]
 
 
-fond <- merge(comf, tabl_id, by.x = "COMF_CODE", by.y = "id_comf", all.x = TRUE)
-fond$id_multi[is.na(fond$id_multi)] <- fond$COMF_CODE[is.na(fond$id_multi)]
-fond <- fond[, -1]
-
-comar <- aggregate(fond, by = list(fond$id_multi), FUN = function(x) x[1])
-comar <- comar[, -1]
-
-st_write(comar, "output/comar.gpkg")
-
- 
 ###############################################################################
-################################################################## CARTOGRAPHIE
+####################################################################### DONNEES
 
-data <- read.csv("casd/cah_decile.csv")
+data <- read.csv("C:/Users/Antoine Beroud/Desktop/casd/export/TREVPOP_export_04/donnees/cah_decile.csv")
+summary(nchar(data$COM))
+
 data$id_tmp <- substr(data$COM, 1, 5)
 data <- data[, c(2,3,7)]
 
-fond <- st_read("output/comar.gpkg")
 fond$id_tmp <- substr(fond$id_multi, 1, 5)
 
-zoom_created <- create_zoom(fond = fond, 
-                            villes = c("Paris", "Marseille", "Lyon", "Toulouse", "Nantes", "Montpellier",
-                                       "Bordeaux", "Lille", "Rennes", "Reims", "Dijon",
-                                       "Angers", "Grenoble", "Clermont-Ferrand", "Tours", "Perpignan",
-                                       "Besancon", "Rouen", "La Rochelle", "Le Havre", "Nice",
-                                       "Orleans", "Troyes", "Bourges", "Dunkerque", "Annecy"),
-                            lon = c(0.545, 2.068, -1.548, 2.957, 4.080, 3.570), 
-                            lat = c(46.815, 47.221, 43.471, 48.387, 49.924, 47.797),
-                            noms = c("Chatellerault", "Vierzon", "Biarritz", "Montereau-Fault-Yonne", "Hirson", "Auxerre"), 
-                            buffer = 10000)
+zoom_created <- asf_zoom(fond = fond, 
+                         villes = c("Paris", "Marseille", "Lyon", "Toulouse", "Nantes", "Montpellier",
+                                    "Bordeaux", "Lille", "Rennes", "Reims", "Dijon",
+                                    "Angers", "Grenoble", "Clermont-Ferrand", "Tours", "Perpignan",
+                                    "Besancon", "Rouen", "La Rochelle", "Le Havre", "Nice",
+                                    "Orleans", "Troyes", "Bourges", "Dunkerque", "Annecy"),
+                         lon = c(0.545, 2.068, -1.548, 2.957, 4.080, 3.570), 
+                         lat = c(46.815, 47.221, 43.471, 48.387, 49.924, 47.797),
+                         noms = c("Chatellerault", "Vierzon", "Biarritz", "Montereau-Fault-Yonne", "Hirson", "Auxerre"), 
+                         buffer = 20000)
 
-zooms <- zoom_created$zooms
-labels <- zoom_created$labels
+zoom <- zoom_created$zoom
+label <- zoom_created$label
+mf_map(zoom)
 
-fond <- simplify_geom(fond, keep = 0.1)
+fond <- asf_simplify(fond, keep = 0.5)
 
-fondata <- merge_fondata(data, fond, zooms, id = c("id_tmp", "id_tmp"))
+fondata <- asf_fondata(data, fond, zoom, id = c("id_tmp", "id_tmp"))
+
+
+###############################################################################
+################################################################## CARTOGRAPHIE
 
 palette <- c(
   "1" = "#fddaac",
@@ -254,11 +127,3 @@ mf_label(labels, var = "label", col = "#000000", cex = 0.3)
 mf_map(zoom_m, var = "CLASS4", type = "typo", pal = pal_m, border = NA, add = TRUE)
 
 mf_map(zoom_p, var = "CLASS4", type = "typo", pal = pal_p, border = NA, add = TRUE)
-
-
-
-
-
-
-
-
