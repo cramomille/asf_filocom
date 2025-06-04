@@ -1,17 +1,15 @@
 
-#                                      EXPLORATIONS POUR LA PLANCHE SUR FILOCOM
+#                                    ASF - SCRIPT DE LA PLANCHE SUR LES REVENUS
 #
 #                                                                antoine beroud
 #                                                           antonine ribardiere
-#                                                                  aliette roux
 
 library(sf)
-library(mapsf)
 library(asf)
-
+library(mapsf)
 
 ###############################################################################
-########################################################### FOND D'ALIETTE ROUX
+########################################################## FONDs D'ALIETTE ROUX
 
 # Lecture des fichiers
 mar <- asf_mar()
@@ -62,6 +60,7 @@ summary(nchar(data$COM))
 data$id_tmp <- substr(data$COM, 1, 5)
 data <- data[, c(2,3,7)]
 
+fond <- st_read("output/fond.gpkg")
 fond$id_tmp <- substr(fond$id_multi, 1, 5)
 
 zoom_created <- asf_zoom(fond = fond, 
@@ -103,12 +102,7 @@ mf_map(fondata, var = "CLASS9", type = "typo", pal = palette, border = NA)
 mf_label(label, var = "nom", col = "#000000", cex = 0.3)
 
 
-
-
-
-
-
-tvma <- read.csv("casd/cah_tvma.csv")
+tvma <- read.csv("C:/Users/Antoine Beroud/Desktop/casd/export/TREVPOP_export_06/donnees/cah_tvma.csv")
 tvma <- tvma[, c(2,3)]
 
 fondtvma <- merge(fondata, tvma, by = "id_tmp", all = TRUE)
